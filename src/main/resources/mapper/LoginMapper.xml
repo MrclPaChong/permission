@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.meishutech.permission.mapper.LoginDao">
+
+    <select id="getUser" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+            u.uid	    uid,
+            u.id       userId,
+            u.username username,
+            u.password password,
+            u.nickname nickName,
+            u.department_id departmentId,
+            u.delete_status deleteStatus
+        FROM
+            sys_user u
+        WHERE u.username = #{username}
+          AND u.password = #{password}
+          AND u.delete ='1'
+    </select>
+
+
+    <select id="getUserByName" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+            u.uid	    uid,
+            u.id       userId,
+            u.username username,
+            u.password password,
+            u.nickname nickName,
+            u.tel,
+            u.email,
+            u.shenfen,
+            u.create_time createTime,
+            u.update_time updateTime,
+            u.delete_status deleteStatus
+        FROM
+            sys_user u
+        WHERE u.username = #{username}
+        AND u.delete ='1'
+    </select>
+</mapper>

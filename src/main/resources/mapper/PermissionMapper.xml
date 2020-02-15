@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.meishutech.permission.mapper.PermissionDao">
+
+    <resultMap id="permissionMap" type="com.meishutech.permission.model.tree.OneMany">
+        <id column="userId" property="userId"/>
+        <result column="username" property="username"/>
+        <result column="identity" property="identity"/>
+        <result column="nickname" property="nickname"/>
+        <collection property="roleList" ofType="com.alibaba.fastjson.JSONObject">
+            <id column="roleId" property="roleId"/>
+            <result column="roleName" property="roleName"/>
+        </collection>
+        <collection property="departmentList" ofType="com.alibaba.fastjson.JSONObject">
+            <id column="departmentId" property="departmentId"/>
+            <result column="departmentName" property="departmentName"/>
+        </collection>
+        <collection property="menuList" ofType="com.alibaba.fastjson.JSONObject">
+            <id column="menuCode" property="menuCode"/>
+            <result column="id" property="id"/>
+            <result column="icon" property="icon"/>
+            <result column="menuName" property="menuName"/>
+            <result column="component" property="component"/>
+            <result column="requiredPermission" property="requiredPermission"/>
+            <result column="sort" property="sort"/>
+            <result column="parentId" property="parentId"/>
+        </collection>
+        <collection property="permissionList" ofType="String">
+            <id column="permissionCode" property="permissionCode"/>
+        </collection>
+    </resultMap>
+    <select id="getUserPermission" resultMap="permissionMap">
+        select
+        srdpt.userId,
+        srdpt.username,
+        srdpt.identity,
+        srdpt.nickname,
+        srdpt.id,
+        srdpt.icon,
+        srdpt.menuName,
+        srdpt.menuCode,
+        srdpt.permissionCode,
+        srdpt.requiredPermission,
+        srdpt.component,
+        srdpt.sort,
+        srdpt.parentId
+        from
+        (
+        SELECT
+        u.id userId,
+        u.username username,
+        u.identity,
+        u.nickname nickname,
+        p.id id,
+        p.menu_name menuName,
+        p.menu_code menuCode,
+        p.permission_code permissionCode,
+        p.required_permission requiredPermission,
+        p.component component,
+        p.parent_id parentId,
+        p.sort,
+        p.icon,
+        p.update_time
+        FROM
+        sys_user u
+        LEFT JOIN sys_user_role sur ON u.id = sur.user_id
+        LEFT JOIN sys_role r ON r.id = sur.role_id
+        LEFT JOIN sys_department_role_permission rp ON r.id = rp.role_id
+        LEFT JOIN sys_permission p ON rp.permission_id = p.id
+        WHERE
+        u.username =#{username}
+        AND u.delete_status = '1'
+        AND u.`delete`='1'
+        UNION
+        SELECT
+        u.id userId,
+        u.username username,
+        u.identity,
+        u.nickname nickname,
+        p.id id,
+        p.menu_name menuName,
+        p.menu_code menuCode,
+        p.permission_code permissionCode,
+        p.required_permission requiredPermission,
+        p.component component,
+        p.parent_id parentId,
+        p.sort,
+        p.icon,
+        p.update_time
+        FROM
+        sys_user u
+        LEFT JOIN sys_user_department sud ON u.id = sud.user_id
+        LEFT JOIN sys_department d ON sud.id = d.id
+        LEFT JOIN sys_department_role_permission rp ON d.id = rp.department_id
+        LEFT JOIN sys_permission p ON rp.permission_id = p.id
+        WHERE
+        u.username =#{username}
+        AND u.delete_status = '1'
+        AND u.`delete`='1') srdpt
+        ORDER BY srdpt.sort,srdpt.update_time asc
+
+
+
+        <!--
+             SELECT
+            u.id              userId,
+            u.nickname        nickname,
+            u.role_id         roleId,
+            r.role_name       roleName,
+            p.menu_name       menuName,
+            p.menu_code       menuCode,
+            p.permission_code permissionCode,
+            p.required_permission requiredPermission,
+            p.component        component,
+            p.parent_id        parentId
+        FROM sys_user u
+                 LEFT JOIN sys_role r ON r.id = u.role_id
+                 LEFT JOIN sys_department_role_permission rp ON u.role_id = rp.role_id
+                LEFT JOIN sys_permission p ON rp.permission_id = p.id AND p.component is not null
+        WHERE u.username = #{username}
+          AND u.delete_status = '1'
+        -->
+        <!--
+
+    SELECT
+      u.id              userId,
+      u.nickname        nickname,
+      u.role_id         roleId,
+      r.role_name       roleName,
+      p.menu_name       menuName,
+      p.menu_code       menuCode,
+      p.permission_code permissionCode,
+      p.required_permission requiredPermission,
+      p.component        component
+  FROM sys_user u
+           LEFT JOIN sys_role r ON r.id = u.role_id
+           LEFT JOIN sys_department_role_permission rp ON u.role_id = rp.role_id
+           LEFT JOIN sys_permission p ON rp.permission_id = p.id AND rp.delete_status = '1'
+  WHERE u.username = #{username}
+    AND u.delete_status = '1'
+
+
+
+-->
+    </select>
+
+    <!--查询用户的角色-->
+    <select id="getUserRole" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+        sr.id roleId,
+        sr.role_name roleName
+        FROM
+        sys_user su,
+        sys_user_role sur,
+        sys_role sr
+        WHERE
+        su.id =sur.user_id
+        AND
+        sr.id =sur.role_id
+        AND
+        su.`delete` ='1'
+        AND
+        sr.`delete` ='1'
+        AND
+        sr.delete_status ='1'
+        AND
+        sur.`delete` ='1'
+        AND
+        su.username =#{username}
+    </select>
+    <!--查询用户的部门-->
+    <select id="getUserDepartment" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+        sd.id departmentId,
+        sd.department_name departmentName
+        FROM
+        sys_user su,
+        sys_user_department sud,
+        sys_department sd
+        WHERE
+        su.id =sud.user_id
+        AND
+        sd.id =sud.department_id
+        AND
+        su.`delete`='1'
+        AND
+        sd.`delete` ='1'
+        AND
+        sd.delete_status ='1'
+        AND
+        sud.`delete`='1'
+        AND
+        su.username =#{username}
+    </select>
+    <select id="getAllPermission" resultType="String">
+        SELECT p.permission_code permissionCode
+        FROM sys_permission p
+				WHERE
+				p.`delete`='1'
+				AND
+				p.delete_status='1'
+         ORDER BY sort,update_time ASC
+    </select>
+    <select id="getAllMenu" resultType="com.alibaba.fastjson.JSONObject">
+          SELECT DISTINCT
+        id,
+        menu_code menuCode,
+        menu_name menuName,
+        component,
+        required_permission requiredPermission,
+        parent_id   parentId,
+        icon,
+				sort,
+				update_time
+    FROM
+        sys_permission p
+    WHERE
+        component IS NOT NULL
+				AND
+				p.`delete`='1'
+				AND
+				p.delete_status ='1'
+				ORDER BY sort,update_time ASC
+    </select>
+    
+    <select id="getAnonymousPermission" resultType="String">
+       SELECT
+        sp.permission_code  permissionCode
+        FROM
+        sys_user su,
+        sys_permission sp,
+        sys_user_permission sup
+        WHERE
+        su.id = sup.user_id
+        AND
+        sp.id =sup.permission_id
+        AND
+        su.username =#{username}
+				AND
+				su.`delete` ='1'
+				AND
+				su.delete_status ='1'
+				AND
+				sp.`delete`='1'
+				AND
+				sp.delete_status ='1'
+				AND
+				sup.delete_status ='1'
+        ORDER BY sp.sort,sp.update_time ASC
+    </select>
+
+    <select id="getAnonymousMenu" resultType="com.alibaba.fastjson.JSONObject">
+           SELECT
+        sp.id,
+        sp.menu_code menuCode,
+        sp.menu_name menuName,
+        sp.component,
+        sp.required_permission requiredPermission,
+        sp.parent_id   parentId,
+        sp.sort,
+        icon
+        FROM
+        sys_user su,
+        sys_permission sp,
+        sys_user_permission sup
+        WHERE
+        su.id = sup.user_id
+        AND
+        sp.id =sup.permission_id
+        AND
+        su.username =#{username}
+        AND
+				su.`delete` ='1'
+				AND
+				su.delete_status ='1'
+				AND
+				sp.`delete`='1'
+				AND
+				sp.delete_status ='1'
+				AND
+				sup.delete_status ='1'
+				AND
+        component IS NOT NULL
+        ORDER BY sp.sort,sp.update_time ASC
+    </select>
+
+</mapper>

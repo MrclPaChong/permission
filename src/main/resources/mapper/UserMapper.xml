@@ -1,0 +1,1101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.meishutech.permission.mapper.UserDao">
+
+    <resultMap id="usersMap" type="com.meishutech.permission.model.tree.OneMany">
+        <id column="userId" property="userId"/>
+        <result column="userName" property="userName"/>
+        <result column="nickName" property="nickName"/>
+        <result column="deleteStatus" property="deleteStatus"/>
+        <result column="tel" property="tel"/>
+        <result column="email" property="email"/>
+        <result column="shenFen" property="shenFen"/>
+        <result column="createTime" property="createTime"/>
+        <result column="updateTime" property="updateTime"/>
+        <collection property="roleLists" ofType="com.alibaba.fastjson.JSONObject">
+            <id column="roleId" property="roleId"/>
+            <result column="roleName" property="roleName"/>
+        </collection>
+        <collection property="departmentLists" ofType="com.alibaba.fastjson.JSONObject">
+            <id column="departmentId" property="departmentId"/>
+            <result column="departmentName" property="departmentName"/>
+        </collection>
+    </resultMap>
+    <!--查询所有用户对应的角色/部门-->
+    <!--查询所有的用户-->
+    <select id="getAllUsers" resultMap="usersMap">
+        SELECT
+        uid userUid,
+        id userId,
+        username userName,
+        nickname nickName,
+        create_time createTime,
+        update_time updateTime,
+        delete_status deleteStatus,
+        tel ,
+        email ,
+        shenFen
+        FROM
+        sys_user
+        <where>
+            <if test="delete!=null and delete!=''">
+                `delete`=#{delete}
+            </if>
+            <if test="searchA!=null and searchA!=''">
+                and CONCAT(uid,id,username,nickname,create_time,update_time,tel,email,shenfen) like '%${searchA}%'
+
+            </if>
+        </where><!--where可以去除第一个空格或者OR-->
+        ORDER BY id asc
+        LIMIT #{offSet}, #{pageRow}
+    </select>
+    <!--查询所有的用户角色-->
+    <select id="getUserRoles" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+        su.id userId,
+        sr.id roleId,
+        sr.role_name roleName
+        FROM
+        sys_user su,
+        sys_user_role sur,
+        sys_role sr
+        where
+            su.id =sur.user_id
+            AND
+            sr.id =sur.role_id
+            AND
+            su.`delete` ='1'
+            AND
+            sr.`delete` ='1'
+            AND
+            sr.delete_status ='1'
+            AND
+            sur.`delete` ='1'
+    </select>
+    <!--查询所有用户的部门-->
+    <select id="getUserDepartments" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+        su.id userId,
+        sd.id departmentId,
+        sd.department_name departmentName
+        FROM
+        sys_user su,
+        sys_user_department sud,
+        sys_department sd
+        where
+            su.id =sud.user_id
+            AND
+            sd.id =sud.department_id
+            AND
+            su.`delete`='1'
+            AND
+            sd.`delete` ='1'
+            AND
+            sd.delete_status ='1'
+            AND
+            sud.`delete`='1'
+
+    </select>
+    <select id="getAllUser" resultType="com.alibaba.fastjson.JSONObject">
+            SELECT
+        uid userUid,
+        id userId,
+        username userName,
+        nickname nickName,
+        role_id  roleId,
+        department_id departmentId,
+        create_time createTime,
+        update_time updateTime,
+        delete_status deleteStatus,
+        tel ,
+        email ,
+        shenFen
+        FROM
+        sys_user
+        <where>
+            <if test="delete!=null and delete!=''">
+        	`delete`=#{delete}
+            </if>
+            <if test="searchA!=null and searchA!=''">
+                and CONCAT(uid,id,username,nickname,create_time,update_time,tel,email,shenfen) like '%${searchA}%'
+
+            </if>
+        </where><!--where可以去除第一个空格或者OR-->
+        ORDER BY id asc
+        LIMIT #{offSet}, #{pageRow}
+
+    </select>
+    <select id="countUser" resultType="Integer">
+        SELECT count(id)
+        FROM sys_user
+				WHERE
+				`delete`='1'
+        <if test="searchA!=null and searchA!=''">
+            and CONCAT(uid,id,username,nickname,create_time,update_time,tel,email,shenfen) like '%${searchA}%'
+        </if>
+
+    </select>
+
+    <resultMap id="userMap" type="com.meishutech.permission.model.tree.OneMany">
+        <id column="userId" property="userId"/>
+        <result column="username" property="username"/>
+        <result column="nickname" property="nickname"/>
+        <result column="roleId" property="roleId"/>
+        <result column="roleName" property="roleName"/>
+        <result column="createTime" property="createTime"/>
+        <result column="updateTime" property="updateTime"/>
+        <result column="lastLoginTime" property="lastLoginTime"/>
+        <result column="deleteStatus" property="deleteStatus"/>
+        <collection property="permissionList" ofType="String">
+            <id column="permissionName" property="permissionName"/>
+        </collection>
+    </resultMap>
+    <select id="listUser" resultMap="userMap">
+        SELECT
+            u.*,
+            r.role_name                            roleName,
+            CONCAT(p.menu_name, p.permission_name) permissionName
+        FROM (
+                 SELECT
+                     id                                      userId,
+                     username                                username,
+                     nickname                                nickname,
+                     role_id                                 roleId,
+                     delete_status                           deleteStatus,
+                     DATE_FORMAT(create_time, '%Y.%m.%d %T') createTime,
+                     DATE_FORMAT(update_time, '%Y.%m.%d %T') updateTime
+                 FROM sys_user
+                 WHERE delete_status = '1'
+                 ORDER BY id
+                 LIMIT #{offSet}, #{pageRow}
+             ) u
+            LEFT JOIN sys_role r ON r.id = u.roleId
+            LEFT JOIN sys_department_role_permission rp ON rp.role_id = r.id
+            LEFT JOIN sys_permission p ON p.id = rp.permission_id
+
+        ORDER BY u.userId
+    </select>
+
+    <!--根据用户ID查询所属部门ID-->
+    <select id="DepartmentIdByUserId" resultType="com.alibaba.fastjson.JSONObject">
+            SELECT
+            sd.id id,
+            su.id userId
+            FROM
+            sys_user su,
+            sys_department sd,
+            sys_user_department sud
+            WHERE
+            su.id =sud.user_id
+            AND
+            sd.id =sud.department_id
+						AND
+						sud.`delete`='1'
+						AND
+						sd.`delete`='1'
+						AND
+						sd.delete_status ='1'
+            AND
+            su.id=#{userId}
+    </select>
+
+    <!--根据用户ID查询所属角色ID-->
+    <select id="RoleIdByUserId" resultType="com.alibaba.fastjson.JSONObject">
+            SELECT
+            sr.id id
+            FROM
+            sys_user su,
+            sys_role sr,
+            sys_user_role sur
+            WHERE
+            su.id = sur.user_id
+            AND sr.id = sur.role_id
+            AND sur.`delete` = '1'
+						AND
+						sur.`delete`='1'
+						AND
+						sr.`delete`='1'
+						AND
+						sr.delete_status ='1'
+            AND su.id = #{userId}
+    </select>
+    <!--根据部门ID：查询所属部门的用户信息-->
+    <select id="userBydepartmentId" resultType="com.alibaba.fastjson.JSONObject">
+            SELECT
+        su.uid userUid,
+        su.id userId,
+        su.username userName,
+        su.nickname nickName,
+        su.create_time createTime,
+        su.update_time updateTime,
+        su.delete_status deleteStatus,
+        su.tel,
+        su.email,
+        su.shenfen shenFen
+         FROM
+        sys_user su,
+        sys_department sd,
+        sys_user_department sud
+         WHERE
+        su.id = sud.user_id
+        AND sd.id = sud.department_id
+        AND su.delete='1'
+        AND sd.id = #{departmentId}
+        LIMIT #{offSet}, #{pageRow}
+
+    </select>
+
+    <!--如果前台接收部门为null / "" -->
+    <update id="removeOldDepartmentAll">
+              UPDATE sys_user_department
+        SET
+        `delete` = '2'
+        WHERE user_id = #{userId}
+    </update>
+    <!--如果前台接收角色为null / "" -->
+    <update id="removeOldRoleAll">
+              UPDATE sys_user_role
+        SET
+        `delete` = '2'
+        WHERE user_id = #{userId}
+    </update>
+    <!--如果前台接收用户直接权限为null / "" -->
+    <update id="removeOldUserPermissionAll">
+              UPDATE sys_user_permission
+        SET
+        delete_status = '2'
+        WHERE user_id = #{userId}
+    </update>
+    <select id="userBydepartmentIdCount" resultType="java.lang.Integer">
+        SELECT
+        count(su.id)
+         FROM
+        sys_user su,
+        sys_department sd,
+        sys_user_department sud
+         WHERE
+        su.id = sud.user_id
+        AND sd.id = sud.department_id
+        AND sd.id = #{departmentId}
+    </select>
+    <select id="getAllRoles" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+            id        roleId,
+            role_name roleName
+        FROM sys_role
+        WHERE delete_status='1'
+    </select>
+
+    <insert id="addUser" useGeneratedKeys="true" keyProperty="userId">
+        INSERT INTO sys_user
+        (uid, username, password, nickname, tel, email, shenfen,delete_status) VALUES
+            (#{uid}, #{userName}, #{passwordKey}, #{nickName}, #{tel}, #{email}, #{shenFen},#{deleteStatus})
+    </insert>
+    <select id="getUserId" resultType="java.lang.Integer">
+        SELECT id FROM `sys_user` WHERE username =#{userName}
+    </select>
+    <!--批量添加部门-->
+    <insert id="addUserDepartmentId">
+        INSERT INTO sys_user_department(user_id,department_id)
+        VALUES
+        <foreach collection="departmentId" item="item" index="index" separator=",">
+            (#{userId}, #{item})
+        </foreach>
+    </insert>
+    <!--删除用户旧的部门-->
+    <update id="deleteOldUserDepartment">
+        UPDATE sys_user_department
+        SET
+        `delete` = '2'
+        WHERE user_id = #{userId}
+        AND department_id in (
+        <foreach collection="departmentId" item="item" index="index" separator=",">
+            #{item}
+        </foreach>
+        )
+    </update>
+    <!--根据前端获取的departmentId修改delete为1-->
+    <update id="updateDeleteByDepartmentId">
+        UPDATE sys_user_department
+        SET
+        `delete` = '1'
+        WHERE
+        department_id in (
+        <foreach collection="departmentId" item="item" index="index" separator=",">
+            #{item}
+        </foreach>
+        )
+    </update>
+    <!--查询出用户部门关系表信息-->
+    <select id="getUserDepartmentId" resultType="java.lang.Integer">
+        SELECT department_id departmentId FROM sys_user_department WHERE user_id =#{userId}
+    </select>
+
+
+    <update id="delUser">
+        UPDATE sys_user SET `delete` = '2' WHERE id in
+        <foreach collection="userId" item="item" index="index" separator="," open="(" close=")">
+         #{item}
+        </foreach>
+    </update>
+    <!--为用户添加新的角色-->
+    <insert id="addNewUserRole">
+        insert into sys_user_role (user_id, role_id)
+        values
+        <foreach collection="roleId" item="item" index="index" separator=",">
+            (#{userId}, #{item})
+        </foreach>
+    </insert>
+    <!--删除用户旧的角色-->
+    <update id="deleteOldUserRole">
+        UPDATE sys_user_role
+        SET
+        `delete` = '2'
+        WHERE user_id = #{userId}
+        AND role_id in (
+        <foreach collection="roleId" item="item" index="index" separator=",">
+            #{item}
+        </foreach>
+        )
+    </update>
+    <!--查询出用户角色关系表信息-->
+    <select id="getUserRole" resultType="java.lang.Integer">
+        SELECT role_id roleId FROM sys_user_role where user_id =#{userId}
+    </select>
+    <!--根据前端获取的roleId修改delete为1-->
+    <update id="updateDeleteByRoleId">
+        UPDATE sys_user_role
+        SET
+        `delete` = '1'
+        WHERE
+         role_id in (
+        <foreach collection="roleId" item="item" index="index" separator=",">
+            #{item}
+        </foreach>
+        )
+    </update>
+    <!--修改用户/部门/角色/权限(菜单)-->
+    <update id="updateUser">
+        update sys_user
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="null != userName and '' != userName">
+                username=#{userName},
+            </if>
+            <if test="null != password and '' != password">
+                password=#{password},
+            </if>
+            <if test="null != nickName and '' != nickName">
+                nickname=#{nickName},
+            </if>
+            <if test="null != deleteStatus and '' != deleteStatus">
+                delete_status=#{deleteStatus},
+            </if>
+            <if test="null != tel and '' != tel">
+                tel=#{tel},
+            </if>
+            <if test="null != email and '' != email">
+                email=#{email},
+            </if>
+            <if test="null != shenFen and '' != shenFen">
+                shenfen=#{shenFen},
+            </if>
+        </trim>
+        where id=#{userId}
+    </update>
+
+
+    <!--根据用户ID查出对应权限Id-->
+    <select id="getPermissionByUserId" resultType="com.alibaba.fastjson.JSONObject">
+                 SELECT
+        sp.id
+        FROM
+        sys_user su,
+        sys_user_permission sup,
+        sys_permission sp
+        WHERE
+        su.id =sup.user_id
+        AND
+        sp.id =sup.permission_id
+        AND
+        sup.delete_status ='1'
+        AND
+        sp.`delete`='1'
+        AND
+        sp.delete_status ='1'
+        AND
+        su.id =#{userId}
+    </select>
+    <!--删除用户旧的角色-->
+    <update id="deleteOldUserPermission">
+        UPDATE sys_user_permission
+        SET
+        delete_status = '2'
+        WHERE user_id = #{userId}
+        AND permission_id in (
+        <foreach collection="permissionId" item="item" index="index" separator=",">
+            #{item}
+        </foreach>
+        )
+    </update>
+    <!--为用户添加新的权限-->
+    <insert id="addUserPermission">
+        insert into sys_user_permission (upid,user_id, permission_id)
+        values
+        <foreach collection="permissionId" item="item" index="index" separator=",">
+            (#{upid},#{userId}, #{item})
+        </foreach>
+    </insert>
+    <!--查询出用户权限关系表信息-->
+    <select id="getpermissionIdByUserId" resultType="java.lang.Integer">
+        SELECT permission_id permissionId FROM sys_user_permission where user_id =#{userId}
+    </select>
+
+    <!--根据前端获取的roleId修改delete为1-->
+    <update id="updateUserPermissionByUserId">
+        UPDATE sys_user_permission
+        SET
+        delete_status = '1'
+        WHERE
+        permission_id in (
+        <foreach collection="permissionId" item="item" index="index" separator=",">
+            #{item}
+        </foreach>
+        )
+    </update>
+
+    <resultMap id="roleMap" type="com.meishutech.permission.model.tree.OneMany">
+        <id column="roleId" property="roleId"/>
+        <result column="roleName" property="roleName"/>
+        <collection property="users" ofType="com.alibaba.fastjson.JSONObject">
+            <id column="userId" property="userId"/>
+            <result column="nickname" property="nickname"/>
+        </collection>
+        <collection property="menus" ofType="com.meishutech.permission.model.tree.OneMany">
+            <id column="menuCode" property="menuCode"/>
+            <result column="menuName" property="menuName"/>
+            <collection property="permissions" ofType="com.alibaba.fastjson.JSONObject">
+                <id column="permissionId" property="permissionId"/>
+                <result column="permissionName" property="permissionName"/>
+            </collection>
+        </collection>
+    </resultMap>
+    <select id="listRole" resultMap="roleMap">
+        SELECT
+            r.id              roleId,
+            r.role_name       roleName,
+            u.id              userId,
+            u.nickname        nickname,
+            p.id              permissionId,
+            p.menu_code       menuCode,
+            p.menu_name       menuName,
+            p.permission_name permissionName
+        FROM sys_role r
+            LEFT JOIN sys_user u ON r.id = u.role_id AND u.delete_status = '1'
+            LEFT JOIN sys_department_role_permission rp ON r.id = rp.role_id AND rp.delete_status = '1'
+            LEFT JOIN sys_permission p ON rp.permission_id = p.id
+        WHERE r.delete_status = '1'
+        ORDER BY r.id, p.id
+    </select>
+
+    <select id="listRoleAll" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT rid,id,role_name roleName,delete_status deleteStatus,descs,create_time createTime,update_time updateTime FROM `sys_role`
+        <where>
+            <if test="delete!=null and delete!=''">
+                `delete`=#{delete}
+            </if>
+            <if test="searchA!=null and searchA!=''">
+                and CONCAT(id,role_name,create_time,update_time,`descs`,delete_status) like '%${searchA}%'
+
+            </if>
+        </where><!--where可以去除第一个空格或者OR-->
+
+        LIMIT #{offSet}, #{pageRow}
+    </select>
+
+    <select id="countRole" resultType="Integer">
+    SELECT count(id)
+    FROM sys_role
+    WHERE
+    `delete`='1'
+    <if test="searchA!=null and searchA!=''">
+        and CONCAT(id,role_name,parent_id,create_time,update_time,`descs`,delete_status) like '%${searchA}%'
+    </if>
+    </select>
+
+    <resultMap id="permissionMap" type="com.meishutech.permission.model.tree.OneMany">
+        <id column="menuName" property="menuName"/>
+        <collection property="permissions" ofType="com.alibaba.fastjson.JSONObject">
+            <id column="id" property="id"/>
+            <result column="permissionName" property="permissionName"/>
+            <result column="requiredPerm" property="requiredPerm" javaType="Integer"/>
+        </collection>
+    </resultMap>
+    <select id="listAllPermission" resultMap="permissionMap">
+        SELECT
+            p.id                  id,
+            p.menu_name           menuName,
+            p.permission_name     permissionName,
+            p.required_permission requiredPerm
+        FROM sys_permission p;
+    </select>
+    <!--角色树形列表-->
+    <select id="listMenuRole" resultType="com.meishutech.permission.model.tree.MenuRole">
+             SELECT
+        id,
+        parent_id,
+        role_name,
+        descs,
+        create_time,
+        update_time,
+        delete_status
+            FROM
+	    sys_role
+        <where>
+            `delete`='1'
+            <if test="list!=null and list!=''">
+             AND  delete_status =#{list}
+            </if>
+            ORDER BY id asc
+        </where><!--where可以去除第一个空格或者OR-->
+
+    </select>
+
+    <insert id="insertRole" useGeneratedKeys="true" keyProperty="roleId">
+        INSERT INTO sys_role
+        (role_name)
+        VALUES (#{roleName})
+    </insert>
+    <!--新增角色-->
+    <!--1.https://blog.csdn.net/qq_35661171/article/details/82260708
+        2.https://blog.csdn.net/weixin_43171019/article/details/84641583
+        -->
+    <insert id="addNewRole" >
+        INSERT INTO sys_role
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="rid != null">
+                rid,
+            </if>
+            <if test="parentId != ''">
+                parent_id,
+            </if>
+            <if test="roleName != null">
+                role_name,
+            </if>
+            <if test="desc != null">
+                descs,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="rid != null">
+                #{rid,jdbcType=VARCHAR},
+            </if>
+            <if test="parentId != ''">
+                #{parentId,jdbcType=VARCHAR},
+            </if>
+            <if test="roleName != null">
+                #{roleName,jdbcType=VARCHAR},
+            </if>
+            <if test="desc != null">
+                #{desc,jdbcType=VARCHAR},
+            </if>
+        </trim>
+    </insert>
+
+    <!--修改角色-->
+    <update id="updateNewRole">
+        update sys_role
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="null != parentId and '' != parentId">
+                parent_id=#{parentId},
+            </if>
+            <if test="null != roleName and '' != roleName">
+                role_name=#{roleName},
+            </if>
+            <if test="null != deleteStatus and '' != deleteStatus">
+                delete_status=#{deleteStatus},
+            </if>
+            <if test="null != descs and '' != descs">
+                `descs`=#{descs},
+            </if>
+        </trim>
+        where id=#{roleId}
+    </update>
+
+    <!--为角色选菜单及权限-->
+    <insert id="insertRolePermission">
+        insert into sys_department_role_permission (drpid,role_id, permission_id)
+        values
+        <foreach collection="permissionId" item="item" index="index" separator=",">
+            (#{drpid},#{roleId}, #{item})
+        </foreach>
+    </insert>
+
+    <resultMap id="aRole" type="com.meishutech.permission.model.tree.OneMany">
+        <id column="roleId" property="roleId"/>
+        <result column="roleName" property="roleName"/>
+        <collection property="users" ofType="com.alibaba.fastjson.JSONObject">
+            <id column="userId" property="userId"/>
+        </collection>
+        <collection property="permissionIds" ofType="Integer">
+            <id column="permissionId" property="permissionId"/>
+        </collection>
+    </resultMap>
+    <select id="getRoleAllInfo" resultMap="aRole">
+        SELECT
+            r.id        roleId,
+            r.role_name roleName,
+            u.id        userId,
+            p.id        permissionId
+        FROM sys_role r
+            LEFT JOIN sys_user u ON r.id = u.role_id AND u.delete_status = '1'
+            LEFT JOIN sys_department_role_permission rp ON r.id = rp.role_id AND rp.delete_status = '1'
+            LEFT JOIN sys_permission p ON rp.permission_id = p.id
+        WHERE r.id = #{roleId}
+    </select>
+
+    <update id="removeRole">
+        UPDATE sys_role
+        SET
+            delete_status = '2'
+        WHERE id = #{roleId} and id !=1
+    </update>
+    <!--删除角色-->
+    <update id="delNewRole">
+        UPDATE sys_role SET `delete` = '2' WHERE id in
+        <foreach collection="roleId" item="item" index="index" separator="," open="(" close=")">
+            #{item}
+        </foreach>
+    </update>
+    <!--角色修改：修改deleteStatus状态：1正常 2异常-->
+    <update id="updateStatusByRoleId">
+        UPDATE sys_role SET delete_status =#{deleteStatus}
+        WHERE id in
+        <foreach collection="roleId" item="item" index="index" separator="," open="(" close=")">
+            #{item}
+        </foreach>
+    </update>
+    <update id="removeRoleAllPermission">
+        UPDATE sys_department_role_permission
+        SET
+            delete_status = '2'
+        WHERE role_id = #{roleId}
+    </update>
+    <!--如果前台接收权限为null / "" -->
+    <update id="removeOldPermissionAll">
+              UPDATE sys_department_role_permission
+        SET
+        delete_status = '2'
+        WHERE role_id = #{roleId}
+    </update>
+    <!--移除角色权限-->
+    <update id="removeOldPermission">
+        UPDATE sys_department_role_permission
+        SET
+        delete_status = '2'
+        WHERE role_id = #{roleId}
+        AND permission_id in (
+        <foreach collection="permissionId" item="item" index="index" separator=",">
+            #{item}
+        </foreach>
+        )
+    </update>
+    <!--查询出角色权限关系表信息-->
+    <select id="getPermissionIdByRoleId" resultType="java.lang.Integer">
+        SELECT permission_id permissionId FROM sys_department_role_permission where  role_id =#{roleId}
+    </select>
+    <!--根据角色Id查询权限Id-->
+    <select id="permissionIdByRoleId" resultType="com.alibaba.fastjson.JSONObject">
+     select
+        sp.id
+        FROM
+        sys_role sr,
+        sys_department_role_permission sdrp,
+        sys_permission sp
+        WHERE
+        sr.id =sdrp.role_id
+        AND
+        sp.id =sdrp.permission_id
+				AND
+				sdrp.delete_status ='1'
+				AND
+				sr.`delete` ='1'
+				AND
+				sr.delete_status ='1'
+        AND
+        sr.id =#{roleId}
+    </select>
+    <update id="updateRoleName">
+        UPDATE sys_role
+        SET
+            role_name = #{roleName}
+        WHERE id = #{roleId}
+    </update>
+    <select id="queryExistUsername" resultType="int">
+        select count(0)
+         from sys_user
+         WHERE username=#{username}
+         AND delete_status='1';
+    </select>
+    <select id="queryExistUserRoleDepartment" resultType="com.alibaba.fastjson.JSONObject">
+                SELECT
+            sr.id
+        FROM
+            sys_user su,
+            sys_role sr,
+            sys_user_role sur
+        WHERE
+            su.id = sur.user_id
+            AND sr.id = sur.role_id
+            AND su.username =#{username} UNION
+        SELECT
+            sd.id
+        FROM
+            sys_user su,
+            sys_department sd,
+            sys_user_department sud
+        WHERE
+            su.id = sud.user_id
+            AND sd.id = sud.department_id
+            AND su.username =#{username}
+    </select>
+    <select id="getAllDepartment" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+            did departmentUUID,
+            id departmentId,
+            department_name departmentName,
+            create_time createTime,
+            update_time updateTime,
+            delete_status deleteStatus,
+            parent_id   parentId,
+            required_permission requiredPermission
+        FROM
+            `sys_department`
+        <where>
+            <if test="delete!=null and delete!=''">
+                `delete`=#{delete}
+            </if>
+            <if test="searchA!=null and searchA!=''">
+                and CONCAT(did,id,department_name,create_time,update_time,delete_status,parent_id,required_permission)
+
+            </if>
+        </where><!--where可以去除第一个空格或者OR-->
+        ORDER BY id desc
+        LIMIT #{offSet}, #{pageRow}
+
+    </select>
+    <!--查询部门条数-->
+    <select id="countDepartment" resultType="Integer">
+        SELECT count(id)
+        FROM sys_department
+        WHERE
+        `delete`='1'
+        <if test="searchA!=null and searchA!=''">
+            AND CONCAT(id,parent_id,department_name,required_permission,delete_status,create_time,update_time) like '%${searchA}%'
+        </if>
+
+    </select>
+    <!--部门删除：批量-->
+    <update id="deleteByDepartmentId">
+        UPDATE sys_department SET `delete` = '2' WHERE id in
+        <foreach collection="departmentId" item="item" index="index" separator="," open="(" close=")">
+            #{item}
+        </foreach>
+    </update>
+    <!--部门修改：修改deleteStatus状态：1正常 2异常-->
+    <update id="deleteStatusByDepartmentId">
+        UPDATE sys_department SET delete_status =#{deleteStatus}
+        WHERE id in
+        <foreach collection="departmentId" item="item" index="index" separator="," open="(" close=")">
+            #{item}
+        </foreach>
+    </update>
+
+    <!--部门新增-->
+    <insert id="addNewDepartment">
+        insert into sys_department
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="did != null">
+                did,
+            </if>
+            <if test="parentId != null">
+                parent_id,
+            </if>
+            <if test="departmentName != null">
+                department_name,
+            </if>
+            <if test="deleteStatus != null">
+                delete_status,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="did != null">
+                #{did,jdbcType=VARCHAR},
+            </if>
+            <if test="parentId != null">
+                #{parentId,jdbcType=VARCHAR},
+            </if>
+            <if test="departmentName != null">
+                #{departmentName,jdbcType=VARCHAR},
+            </if>
+            <if test="deleteStatus != null">
+                #{deleteStatus,jdbcType=VARCHAR},
+            </if>
+
+        </trim>
+
+    </insert>
+    <!--新增之前效验部门是否已存在-->
+    <select id="queryExistDepartmentUsername" resultType="java.lang.Integer">
+        select COUNT(0) FROM sys_department WHERE department_name =#{departmentName}
+    </select>
+    <!--为部门选择菜单-->
+    <insert id="addNewPermissionByDepartmentId" >
+        INSERT INTO sys_department_role_permission(drpid,department_id,permission_id)
+        VALUES
+        <foreach collection="permissionId" item="item" index="index" separator=",">
+            (#{drpid},#{departmentId}, #{item})
+        </foreach>
+    </insert>
+
+    <!--修改部门-->
+    <update id="updateDepartment">
+        update sys_department
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="null != parentId and '' != parentId">
+                parent_id=#{parentId},
+            </if>
+            <if test="null != departmentName and '' != departmentName">
+                department_name=#{departmentName},
+            </if>
+            <if test="null != deleteStatus and '' != deleteStatus">
+                delete_status=#{deleteStatus},
+            </if>
+            <if test="null != requiredPermission and '' != requiredPermission">
+                required_permission=#{requiredPermission},
+            </if>
+        </trim>
+        where id=#{departmentId}
+    </update>
+    <!--如果permissionId 为 nul / ""-->
+    <update id="deleteOldPermissionAllByDepartment">
+        UPDATE sys_department_role_permission
+        SET
+        delete_status = '2'
+        WHERE department_id = #{departmentId}
+    </update>
+    <!--删除部门旧的菜单-->
+    <update id="deleteOldPermissionByDepartment">
+        UPDATE sys_department_role_permission
+        SET
+        delete_status = '2'
+        WHERE department_id = #{departmentId}
+        AND permission_id in (
+        <foreach collection="permissionId" item="item" index="index" separator=",">
+            #{item}
+        </foreach>
+        )
+    </update>
+    <!--查询出部门权限关系表信息-->
+    <select id="getDepartmentId" resultType="java.lang.Integer">
+        SELECT permission_id permissionId FROM sys_department_role_permission where department_id =#{departmentId}
+    </select>
+    <!--根据前端获取的permission_id修改delete为1-->
+    <update id="updateDeleteByDepartmentId2">
+        UPDATE sys_department_role_permission
+        SET
+        delete_status = '1'
+        WHERE
+        permission_id in (
+        <foreach collection="permissionId" item="item" index="index" separator=",">
+            #{item}
+        </foreach>
+        )
+    </update>
+    <!--部门树形列表map-->
+    <select id="treeMenuDepartment" resultType="com.meishutech.permission.model.tree.MenuDepartment">
+    select id,parent_id,department_name,required_permission,delete_status,create_time,update_time from sys_department
+        <where>
+            `delete`='1'
+            <if test="list != null and list != ''">
+                AND delete_status =#{list}
+            </if>
+            ORDER BY id desc
+        </where><!--where可以去除第一个空格或者OR-->
+
+    </select>
+
+
+
+
+
+    <!--根据部门Id获取权限id-->
+    <select id="permissionIdByDepartmentId" resultType="com.alibaba.fastjson.JSONObject">
+     select
+        sp.id
+        FROM
+        sys_department sd,
+        sys_department_role_permission sdrp,
+        sys_permission sp
+        WHERE
+        sd.id =sdrp.department_id
+        AND
+        sp.id =sdrp.permission_id
+				AND
+				sdrp.delete_status ='1'
+				AND
+				sd.delete_status ='1'
+				AND
+				sd.`delete` ='1'
+        AND
+        sd.id =#{departmentId}
+    </select>
+
+
+
+    <!--菜单树形列表：map-->
+    <select id="treeMenuPermission" resultType="com.meishutech.permission.model.tree.MenuPermission">
+     SELECT id,parent_id,menu_name,menu_code,permission_name,permission_code,icon,required_permission ,component,grade,sort,delete_status,create_time,update_time
+		FROM sys_permission
+        <where>
+            `delete`='1'
+            <if test="list!=null and list!=''">
+                AND required_permission= #{list} AND  delete_status ='1'
+            </if>
+            ORDER BY sort,update_time asc
+        </where><!--where可以去除第一个空格或者OR-->
+
+
+    </select>
+    <!--统计权限表总条数-->
+    <select id="countPermission" resultType="Integer">
+        SELECT count(id)
+        FROM sys_permission
+        WHERE
+        `delete`='1'
+        <if test="searchA!=null and searchA!=''">
+        and CONCAT(pid,id,menu_code,menu_name,permission_code,permission_name,component) like '%${searchA}%'
+        </if>
+
+    </select>
+    <!--查询所有权限菜单：前端展示用-->
+    <select id="getAllPermission" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+        pid permissionUUID,
+        id permissionId,
+        menu_code menuCode,
+        menu_name menuName,
+        permission_code permissionCode,
+        permission_name permissionName,
+        required_permission requiredPermission,
+        component,
+        parent_id permissionPid,
+        mennu_parentId mennuParentId,
+        create_time createTime,
+        update_time updateTime,
+        delete_status deleteStatus
+        FROM
+        sys_permission
+        <where>
+            <if test="delete!=null and delete!=''">
+                `delete`=#{delete}
+            </if>
+            <if test="searchA!=null and searchA!=''">
+                and CONCAT(pid,id,menu_code,menu_name,permission_code,permission_name,component) like '%${searchA}%'
+
+            </if>
+        </where><!--where可以去除第一个空格或者OR-->
+
+        LIMIT #{offSet}, #{pageRow}
+    </select>
+    <!--菜单删除：批量-->
+    <update id="delNewPermission">
+        UPDATE sys_permission SET `delete` = '2' WHERE id in
+        <foreach collection="permissionId" item="item" index="index" separator="," open="(" close=")">
+            #{item}
+        </foreach>
+    </update>
+    <!--菜单删除：批量-->
+    <update id="delNewPermissionToDepartmentRolePermission">
+        UPDATE sys_department_role_permission SET delete_status = '2' WHERE permission_id in
+        <foreach collection="permissionId" item="item" index="index" separator="," open="(" close=")">
+            #{item}
+        </foreach>
+    </update>
+
+    <!--修改菜单状态-->
+    <update id="updateNewPermissionStatusById">
+        UPDATE sys_permission SET delete_status =#{deleteStatus} WHERE id in
+        <foreach collection="permissionId" item="item" index="index" separator="," open="(" close=")">
+            #{item}
+        </foreach>
+    </update>
+    <!--新增菜单-->
+    <insert id="addNewPermission" parameterType="com.alibaba.fastjson.JSONObject">
+        insert into sys_permission
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="pid != null">
+                pid,
+            </if>
+            <if test="parentId != null">
+                parent_id,
+            </if>
+            component,delete_status,menu_code,menu_name,permission_code,permission_name,required_permission,grade,sort,icon,
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="pid != null">
+                #{pid,jdbcType=VARCHAR},
+            </if>
+            <if test="parentId != null">
+                #{parentId,jdbcType=VARCHAR},
+            </if>
+            #{component,jdbcType=VARCHAR},#{deleteStatus,jdbcType=VARCHAR},#{menuPermissionCode,jdbcType=VARCHAR},#{menuPermissionName,jdbcType=VARCHAR},#{permissionCode,jdbcType=VARCHAR},#{permissionName,jdbcType=VARCHAR},#{requiredPermission,jdbcType=VARCHAR},#{grade,jdbcType=VARCHAR},#{sort,jdbcType=VARCHAR},#{icon,jdbcType=VARCHAR},
+        </trim>
+
+    </insert>
+    <!--效验惨淡是否存在-->
+    <select id="queryExistmenuName" resultType="java.lang.String">
+        SELECT menu_name FROM sys_permission WHERE menu_name =#{menuPermissionName}
+    </select>
+    <!--根据parentId 查询出 grade：等级  在新增时为子集添加grade时使用原来的等级+1：新等级-->
+    <select id="gradeByPermissionParentId" resultType="java.lang.String">
+            SELECT grade FROM sys_permission  WHERE parent_id =#{parentId}
+    </select>
+    <!--修改菜单-->  <!--动态Sql: set 标签-->
+    <update id="updateNewPermission">
+            update sys_permission
+            <set>
+                <if test="menuPermissionName != null and menuPermissionName != ''">
+                    menu_name = #{menuPermissionName},
+                </if>
+                <if test="menuPermissionCode != null and menuPermissionCode != ''">
+                    menu_code = #{menuPermissionCode},
+                </if>
+                <if test="permissionName != null and permissionName != ''">
+                    permission_name = #{permissionName},
+                </if>
+                <if test="permissionCode != null and permissionCode != ''">
+                    permission_code = #{permissionCode},
+                </if>
+                <if test="requiredPermission != null and requiredPermission != ''">
+                    required_permission = #{requiredPermission},
+                </if>
+                <if test="component != null and component != ''">
+                    component = #{component},
+                </if>
+                <if test="grade != null and grade != ''">
+                    grade = #{grade},
+                </if>
+                <if test="sort != null and sort != ''">
+                    sort = #{sort},
+                </if>
+                <if test="parentId != null and parentId != ''">
+                    parent_id = #{parentId},
+                </if>
+                <if test="deleteStatus != null and deleteStatus != ''">
+                    delete_status = #{deleteStatus},
+                </if>
+            </set>
+            where id = #{permissionId}
+    </update>
+</mapper>
